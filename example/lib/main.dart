@@ -35,7 +35,7 @@ class _MyAppState extends State<MyApp> {
               enableController: true,
               animationDuration: const Duration(seconds: 3),
               frontWidget: Center(
-                child: Container(
+                child: SizedBox(
                   height: 200,
                   width: 140,
                   child: Image.asset(
@@ -44,7 +44,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ),
               ),
-              backWidget: Container(
+              backWidget: SizedBox(
                 height: 200,
                 width: 140,
                 child: Image.asset(
@@ -71,7 +71,7 @@ class _MyAppState extends State<MyApp> {
               animationDuration: const Duration(milliseconds: 800),
               axis: FlipAxis.horizontal,
               frontWidget: Center(
-                child: Container(
+                child: SizedBox(
                   width: 300,
                   height: 200,
                   child: Image.asset(
@@ -80,7 +80,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ),
               ),
-              backWidget: Container(
+              backWidget: SizedBox(
                 width: 300,
                 height: 200,
                 child: Image.asset(
@@ -98,7 +98,7 @@ class _MyAppState extends State<MyApp> {
               axis: FlipAxis.horizontal,
               controller: con1,
               frontWidget: Center(
-                child: Container(
+                child: SizedBox(
                   height: 200,
                   width: 140,
                   child: Image.asset(
@@ -107,7 +107,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ),
               ),
-              backWidget: Container(
+              backWidget: SizedBox(
                 height: 200,
                 width: 140,
                 child: Image.asset(
@@ -140,7 +140,7 @@ class _MyAppState extends State<MyApp> {
               axis: FlipAxis.vertical,
               controller: con,
               frontWidget: Center(
-                child: Container(
+                child: SizedBox(
                   width: 300,
                   height: 200,
                   child: Image.asset(
@@ -149,7 +149,7 @@ class _MyAppState extends State<MyApp> {
                   ),
                 ),
               ),
-              backWidget: Container(
+              backWidget: SizedBox(
                   width: 300,
                   height: 200,
                   child: Image.asset(
