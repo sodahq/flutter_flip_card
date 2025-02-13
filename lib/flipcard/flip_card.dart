@@ -71,8 +71,8 @@ class FlipCard extends StatefulWidget {
     this.controller,
     this.axis = FlipAxis.vertical,
     this.initialSide = CardSide.front,
-    this.timeForFirstPart = 0.3,
-    this.processForFirstPart = 0.7,
+    this.timeForFirstPart = 0.2,
+    this.processForFirstPart = 0.75,
     this.animationDuration = const Duration(milliseconds: 500),
   }) : super(key: key);
 
@@ -80,7 +80,8 @@ class FlipCard extends StatefulWidget {
   FlipCardState createState() => FlipCardState();
 }
 
-class FlipCardState extends State<FlipCard> with TickerProviderStateMixin {
+class FlipCardState extends State<FlipCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   final _flipCardController = FlipCardController();
   late final ValueNotifier<Matrix4> _transformNotifier;
@@ -108,25 +109,13 @@ class FlipCardState extends State<FlipCard> with TickerProviderStateMixin {
 
     if (!_isFront) _animationController.animateTo(1.0);
 
-    final res = _animationListener();
+    final res = _calculateTransforms();
 
     _transformNotifier = ValueNotifier(res.transform);
     _transformBackNotifier = ValueNotifier(res.transformBack);
     _shouldDisplayFrontCard = ValueNotifier(res.isFront);
 
-    _animationController.addListener(() {
-      final res = _animationListener();
-
-      if (res.transform != _transformNotifier.value) {
-        _transformNotifier.value = res.transform;
-      }
-      if (res.transformBack != _transformBackNotifier.value) {
-        _transformBackNotifier.value = res.transformBack;
-      }
-      if (res.isFront != _shouldDisplayFrontCard.value) {
-        _shouldDisplayFrontCard.value = res.isFront;
-      }
-    });
+    _animationController.addListener(_handleAnimationListener);
   }
 
   @override
@@ -144,7 +133,21 @@ class FlipCardState extends State<FlipCard> with TickerProviderStateMixin {
         .then((value) => _anglePlus = pi);
   }
 
-  AnimationListenerResult _animationListener() {
+  void _handleAnimationListener() {
+    final res = _calculateTransforms();
+
+    if (res.transform != _transformNotifier.value) {
+      _transformNotifier.value = res.transform;
+    }
+    if (res.transformBack != _transformBackNotifier.value) {
+      _transformBackNotifier.value = res.transformBack;
+    }
+    if (res.isFront != _shouldDisplayFrontCard.value) {
+      _shouldDisplayFrontCard.value = res.isFront;
+    }
+  }
+
+  AnimationListenerResult _calculateTransforms() {
     double piValue = 0.0;
 
     if (_isFront) {
@@ -153,24 +156,26 @@ class FlipCardState extends State<FlipCard> with TickerProviderStateMixin {
       piValue = pi;
     }
 
-    double adjustedValue = _animationController.value;
+    final double adjustedValue = _animationController.value;
 
-    double timeFactor;
+    final double timeFactor;
 
     if (adjustedValue < widget.timeForFirstPart) {
       timeFactor =
           adjustedValue / widget.timeForFirstPart * widget.processForFirstPart;
     } else {
+      final double remainingTime = adjustedValue - widget.timeForFirstPart;
+      final double secondPartTime = 1 - widget.timeForFirstPart;
+      final double remainingProcess = 1 - widget.processForFirstPart;
+
       timeFactor = widget.processForFirstPart +
-          (adjustedValue - widget.timeForFirstPart) /
-              widget.processForFirstPart *
-              widget.timeForFirstPart;
+          (remainingTime / secondPartTime) * remainingProcess;
     }
 
     double angle = timeFactor * piValue;
 
     // Make sure the angle stays within 0 to pi or -pi
-    angle = angle.clamp(-pi, pi); // Prevent over-rotation
+    // angle = angle.clamp(-pi, pi);
 
     late Matrix4 transform;
     late Matrix4 transformForBack;
@@ -181,7 +186,9 @@ class FlipCardState extends State<FlipCard> with TickerProviderStateMixin {
       transform = Matrix4.identity()
         ..setEntry(3, 2, 0.001)
         ..rotateX(angle);
-      transformForBack = Matrix4.identity()..rotateX(pi);
+      transformForBack = Matrix4.identity()
+        ..setEntry(3, 2, 0.001)
+        ..rotateX(angle + pi); // nếu là horizontal
     } else {
       transform = Matrix4.identity()
         ..setEntry(3, 2, 0.001)
@@ -207,25 +214,48 @@ class FlipCardState extends State<FlipCard> with TickerProviderStateMixin {
             : () {
                 _flipCardController.state!.flipCard();
               },
-        child: ValueListenableBuilder(
-          valueListenable: _transformNotifier,
-          builder: (context, Matrix4 transform, child) {
-            return Transform(
-              alignment: Alignment.center,
-              transform: transform,
-              child: _shouldDisplayFrontCard.value ? widget.frontWidget : child,
+        child: ValueListenableBuilder<bool>(
+          valueListenable: _shouldDisplayFrontCard,
+          builder: (context, isFront, child) {
+            return IndexedStack(
+              clipBehavior: Clip.none,
+              index: isFront ? 0 : 1,
+              children: [
+                ValueListenableBuilder(
+                  valueListenable: _transformNotifier,
+                  builder: (context, Matrix4 transform, child) {
+                    return Transform(
+                      alignment: Alignment.center,
+                      transform: transform,
+                      child: child,
+                    );
+                  },
+                  child: widget.frontWidget,
+                ),
+                ValueListenableBuilder(
+                  valueListenable: _transformNotifier,
+                  builder: (context, Matrix4 transform, child) {
+                    return Transform(
+                      alignment: Alignment.center,
+                      transform: transform,
+                      child: child,
+                    );
+                  },
+                  child: ValueListenableBuilder(
+                    valueListenable: _transformBackNotifier,
+                    builder: (context, Matrix4 transform, child) {
+                      return Transform(
+                        transform: transform,
+                        alignment: Alignment.center,
+                        child: child,
+                      );
+                    },
+                    child: widget.backWidget,
+                  ),
+                ),
+              ],
             );
           },
-          child: ValueListenableBuilder(
-            valueListenable: _transformBackNotifier,
-            builder: (context, Matrix4 transform, child) {
-              return Transform(
-                transform: transform,
-                alignment: Alignment.center,
-                child: widget.backWidget,
-              );
-            },
-          ),
         ),
       ),
     );
